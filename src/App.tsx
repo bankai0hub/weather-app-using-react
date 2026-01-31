@@ -1,35 +1,63 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import WeatherCard from "./components/weathercard";
+import Forecast from "./components/forecast";
+import type { WeatherData, ForecastItem } from "./types/weather";
+import { getCurrentWeather, getForecast } from "./services/weatherApi";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [city, setCity] = useState("Delhi");
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecastData] = useState<ForecastItem[]>([]);
+  const [error, setError] = useState("");
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+  const fetchData = async () => {
+    try {
+      setError("");
+      setWeather(await getCurrentWeather(city));
+      setForecastData(await getForecast(city));
+    } catch {
+      setError("City not found");
+    }
+  };
+
+useEffect(() => {
+  fetchData();
+}, []);
+
+const getBgClass = () => {
+  if (!weather) return "bg-default";
+
+  const main = weather.weather[0].main;
+
+  if (main === "Clear") return "bg-clear";
+  if (main === "Clouds") return "bg-clouds";
+  if (main === "Rain" || main === "Drizzle") return "bg-rain";
+  if (main === "Snow") return "bg-snow";
+
+  return "bg-default";
+};
+
+
+return (
+  <div className={`app ${getBgClass()}`}>
+    <div className="container">
+      <h1 className="title">Weather App</h1>
+
+      <div className="search">
+        <input
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="Enter city"
+        />
+        <button onClick={fetchData}>Search</button>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+
+      {error && <p className="error">{error}</p>}
+
+      {weather && <WeatherCard data={weather} />}
+      {forecast.length > 0 && <Forecast data={forecast} />}
+    </div>
+  </div>
+);
 }
-
-export default App
